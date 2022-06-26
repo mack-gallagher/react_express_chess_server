@@ -1,0 +1,20 @@
+{
+  "name": "spx_online_game_server",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mack-gallagher/spx_online_game_server.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/mack-gallagher/spx_online_game_server/issues"
+  },
+  "homepage": "https://github.com/mack-gallagher/spx_online_game_server#readme"
+}
