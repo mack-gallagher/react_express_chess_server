@@ -95,8 +95,10 @@ router.post('/move', validate_token, check_player_status, async (req, res) => {
   }
 
   if (is_king_in_check(opposing_player,lookahead)) {
-    res.status(200).json({ message: 'Opposing player checked! Checkmate function not implemented yet.', check: 1 });
-    return;
+    if (have_i_won(active_player,lookahead) {
+      res.status(400).json({ message: 'checkmate!' });
+      return;
+    }
   }
 
 
