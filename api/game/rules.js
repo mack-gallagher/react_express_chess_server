@@ -153,6 +153,9 @@ function have_i_won(active_player,next_board) {
         for (let x = 0; x < moves_and_captures_arr_for_tmp_piece.length; x++) {
           ephemeral_board = JSON.parse(JSON.stringify(next_board));
 
+          console.log('ephemeral_board:');
+          console.log(ephemeral_board);
+
           let move_y = moves_and_captures_arr_for_tmp_piece[x][0];
           let move_x = moves_and_captures_arr_for_tmp_piece[x][1];
 
