@@ -15,6 +15,13 @@ function get_player_by_id(id) {
           .first();
 }
 
+const drop_all = async _ => {
+  await db('captures')
+          .truncate();
+  return db('players')
+          .truncate();
+}
+
 const move_piece = async (active_id,start,destination) => {             // TAKES: 1 2-elem arr representing the input 
   const piece_obj = await db('board')
                           .where({ y:start[0],x:start[1] })
@@ -59,6 +66,12 @@ const append_to_captures = piece => {
           .insert({ piece: piece });
 }
 
+function win(id) {
+  return db('players')
+    .where({ id })
+    .update({ won: 1 });
+}
+
 function add(player) {
   return db('players')
     .insert(player)
@@ -67,4 +80,5 @@ function add(player) {
     })
 }
 
-module.exports = { board, players, get_player_by_id, move_piece, reset_board, captures, append_to_captures, add };
+
+module.exports = { board, players, get_player_by_id, move_piece, reset_board, captures, append_to_captures, add, win, drop_all };

@@ -16,6 +16,10 @@ router.get('/', validate_token, async (req, res) => {
     } 
   }
   const curr_player = await Game.get_player_by_id(color);
+  if (!curr_player) {
+    res.status(403).json({ message: "Player not recognized" });
+    return;
+  }
   const active = curr_player.active;
   const captures = await Game.captures();
 
@@ -29,10 +33,11 @@ router.get('/', validate_token, async (req, res) => {
   res.status(200).json({ board: board_state, color: color, active: active, captures: captures, num_players: num_players, won: won });
 });
 
-router.post('/', validate_token, check_player_status, async (req, res) => {
-  const player = req.headers.authorization;
- 
-  res.status(200).json({ message: ':)' });
+router.post('/dump', validate_token, async (req, res) => {
+  await Game.drop_all();
+  Game.reset_board();
+  console.log('db reset!');
+  res.status(200).json({ message: 'Game dropped!' });
 });
 
 router.post('/reset', validate_token, async (req, res) => {
@@ -95,12 +100,11 @@ router.post('/move', validate_token, check_player_status, async (req, res) => {
   }
 
   if (is_king_in_check(opposing_player,lookahead)) {
-    if (have_i_won(active_player,lookahead)) {
-      res.status(400).json({ message: 'checkmate!' });
+    if (have_i_won(active_player,lookahead) === 1) {
+      await Game.win(active_player);
       return;
     }
   }
-
 
 
   /* END VALIDATING MOVE */
@@ -118,5 +122,6 @@ router.post('/move', validate_token, check_player_status, async (req, res) => {
   const new_board = await Game.board();
   res.status(200).json({ board: new_board });
 });
+
 
 module.exports = router;

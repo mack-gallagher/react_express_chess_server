@@ -29,9 +29,6 @@ const get_valid_moves_and_captures = (active_player,y,x,board) => {
   const valid_moves = [];
   const valid_captures = [];
 
-  console.log('vuln_pieces:');
-  console.log(vuln_pieces);
-
   if (vuln_pieces.indexOf(piece) !== -1) { return { valid_moves: [], valid_captures: [] } };
 
   if (valid_moves_per_piece[piece].hasOwnProperty('captures')) {              // if I am a pawn
@@ -137,34 +134,30 @@ function is_king_in_check(vuln_player,board) {
 
 function have_i_won(active_player,next_board) {
 
-  const opposing_player = (active_player==='white'?'black':'white');
-  const opposing_pieces = (opposing_player==='black'?black_pieces:white_pieces);
+  const vuln_player = (active_player===1?2:1);
+  const vuln_pieces = (vuln_player===2?black_pieces:white_pieces);
 
   let ephemeral_board = [];
 
   for (let i = 0; i < next_board.length; i++) {
     for (let j = 0; j < next_board[i].length; j++) {
 
-      if (opposing_pieces.indexOf(next_board[i][j].piece) !== -1) {
+      if (vuln_pieces.indexOf(next_board[i][j].piece) !== -1) {
 
-        let { valid_moves, valid_captures } = get_valid_moves_and_captures(opposing_player,i,j,next_board);
-        let moves_and_captures_arr_for_tmp_piece = valid_moves.concat(valid_captures);
+        const valid_moves_and_captures = get_valid_moves_and_captures(vuln_player,i,j,next_board);
+        let moves_and_captures_arr_for_tmp_piece = valid_moves_and_captures.valid_moves.concat(valid_moves_and_captures.valid_captures);
 
         for (let x = 0; x < moves_and_captures_arr_for_tmp_piece.length; x++) {
           ephemeral_board = JSON.parse(JSON.stringify(next_board));
 
-          console.log('ephemeral_board:');
-          console.log(ephemeral_board);
-
           let move_y = moves_and_captures_arr_for_tmp_piece[x][0];
           let move_x = moves_and_captures_arr_for_tmp_piece[x][1];
-
 
           let ephemeral_piece = next_board[i][j].piece
           ephemeral_board[i][j].piece = '';
           ephemeral_board[move_y][move_x].piece = ephemeral_piece;
 
-          if (is_king_in_check(opposing_player,ephemeral_board) === 0) {
+          if (is_king_in_check(vuln_player,ephemeral_board) === 0) {
             return 0; 
           }
           
