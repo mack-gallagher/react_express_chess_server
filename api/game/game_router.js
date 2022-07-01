@@ -95,7 +95,7 @@ router.post('/move', validate_token, check_player_status, async (req, res) => {
   }
 
   if (is_king_in_check(opposing_player,lookahead)) {
-    if (have_i_won(active_player,lookahead) {
+    if (have_i_won(active_player,lookahead)) {
       res.status(400).json({ message: 'checkmate!' });
       return;
     }
