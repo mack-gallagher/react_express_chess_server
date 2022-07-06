@@ -1,35 +1,39 @@
 const db = require('../../data/db_config');
 const { initial_board } = require('../../data/seeds/01_initial_board');
 
-function board() {
-  return db('board');  
+const hammered_board = async () => {
+  const unhammered_board = await db('board');
+
+  const board = [];
+  for (let i = 0; i < 64; i += 8) {
+    board.push([]);
+    for (let j = i; j-i < 8; j++) {
+      board[i/8].push({});
+      board[i/8][j-i].piece = unhammered_board[j].piece;
+      board[i/8][j-i].moves = [];
+      board[i/8][j-i].captures = [];
+    }
+  }
+
+  return board;
 }
 
-function players() {
-  return db('players');
-}
-
-function get_player_by_id(id) {
-  return db('players')
-          .where({ id })
-          .first();
-}
-
-const drop_all = async _ => {
+const reset_board = async() => {
   await db('captures')
           .truncate();
-  return db('players')
+
+  await db('board')
           .truncate();
+ 
+  return db('board')
+          .insert(initial_board); 
 }
 
-const move_piece = async (active_id,start,destination) => {             // TAKES: 1 2-elem arr representing the input 
+const move_piece = async (active_id,start,destination) => {
   const piece_obj = await db('board')
                           .where({ y:start[0],x:start[1] })
                           .first();
-
-  console.log('piece_obj:',piece_obj);
-
-  const piece = piece_obj.piece;
+const piece = piece_obj.piece;
 
   await db('board')
     .where({ y:start[0],x:start[1] })
@@ -39,22 +43,18 @@ const move_piece = async (active_id,start,destination) => {             // TAKES
     .where({ y:destination[0],x:destination[1] })
     .update({ piece: piece });
 
-  await db('players')
-    .where({ id: active_id })
-    .update({ active: 0 });
-
-  return db('players')
-    .where({ id: (active_id===1?2:1) })
-    .update({ active: 1 });
-
 }
 
-const reset_board = async() => {
-  await db('board')
-          .truncate();
- 
+const remove_piece = pos => {
   return db('board')
-          .insert(initial_board); 
+    .where({ y: pos[0], x: pos[1] })
+    .update({ piece: '' });
+}
+
+const queen = (pos,new_piece) => {
+  return db('board')
+          .where({ y: pos[0], x: pos[1] })
+          .update({ piece: new_piece });
 }
 
 const captures = _ => {
@@ -66,19 +66,73 @@ const append_to_captures = piece => {
           .insert({ piece: piece });
 }
 
-function win(id) {
-  return db('players')
-    .where({ id })
-    .update({ won: 1 });
+const castle = async(active_id,king_or_queen_side) => {
+  if (active_id === 1 
+      && king_or_queen_side === "kingside") {
+    await db('board')
+            .where({ y: 7, x: 4 })
+            .update({ piece: '' });
+    await db('board')
+            .where({ y: 7, x: 7 })
+            .update({ piece: '' });
+    await db('board')
+            .where({ y: 7, x: 6 })
+            .update({ piece: '♔' })
+    return db('board')
+            .where({ y: 7, x: 5 })
+            .update({ piece: '♖' });
+  } else if (active_id === 1 
+              && king_or_queen_side === "queenside") {
+    await db('board')
+            .where({ y: 7, x: 4 })
+            .update({ piece: '' });
+    await db('board')
+            .where({ y: 7, x: 0 })
+            .update({ piece: '' });
+    await db('board')
+            .where({ y: 7, x: 2 })
+            .update({ piece: '♔' })
+    return db('board')
+            .where({ y: 7, x: 3 })
+            .update({ piece: '♖' });
+  } else if (active_id === 2
+              && king_or_queen_side === "kingside") {
+    await db('board')
+            .where({ y: 0, x: 4 })
+            .update({ piece: '' });
+    await db('board')
+            .where({ y: 0, x: 7 })
+            .update({ piece: '' });
+    await db('board')
+            .where({ y: 0, x: 6 })
+            .update({ piece: '♚' });
+    return db('board')
+            .where({ y: 0, x: 5 })
+            .update({ piece: '♜' });
+  } else if (active_id === 2
+              && king_or_queen_side === "queenside") {
+    await db('board')
+            .where({ y: 0, x: 4 })
+            .update({ piece: '' });
+    await db('board')
+            .where({ y: 0, x: 0 })
+            .update({ piece: '' });
+    await db('board')
+            .where({ y: 0, x: 2 })
+            .update({ piece: '♚' });
+    return db('board')
+            .where({ y: 0, x: 3 })
+            .update({ piece: '♜' });
+  } else {
+    return -1;
+  }
 }
 
-function add(player) {
-  return db('players')
-    .insert(player)
-    .then(id => {
-      return db('players');
-    })
-}
-
-
-module.exports = { board, players, get_player_by_id, move_piece, reset_board, captures, append_to_captures, add, win, drop_all };
+module.exports = {  hammered_board,
+                    reset_board,
+                    move_piece,
+                    remove_piece,
+                    queen,
+                    captures,
+                    append_to_captures,
+                    castle  };

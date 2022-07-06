@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 
 const { validate_new_player, validate_token } = require('./auth_middleware');
 const Game = require('../game/game_model');
+const Players = require('./players_model');
 
 function generate_token(player) {
   const payload = {
@@ -18,8 +19,8 @@ function generate_token(player) {
   return jwt.sign(payload, secret, options);
 }
 
-router.get('/', (req, res) => {
-  Game.players()
+router.get('/', validate_token, (req, res) => {
+  Players.get_all()
     .then(result => {
       res.status(200).json(result);
       return;
@@ -31,7 +32,7 @@ router.get('/', (req, res) => {
 
 router.post('/', validate_new_player, async (req, res) => {
 
-  const result = await Game.players();
+  const result = await Players.get_all();
  
   if (result.length > 1) {
     res.status(422).json({ message: 'Sorry, 2 players are already playing' });
@@ -44,7 +45,10 @@ router.post('/', validate_new_player, async (req, res) => {
     req.body.active = 1;
   }
 
-  await Game.add(req.body);
+  req.body.queening = 0;
+  req.body.castle_possible_kingside = 1;
+  req.body.castle_possible_queenside = 1;
+  await Players.add(req.body);
         
   const token = generate_token(req.body);
 

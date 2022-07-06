@@ -8,6 +8,14 @@ exports.up = function(knex) {
         .notNullable();
       tbl.integer('active')
         .notNullable();
+      tbl.integer('queening')
+        .notNullable();
+      tbl.integer('castle_possible_kingside')
+        .notNullable(); 
+      tbl.integer('castle_possible_queenside')
+        .notNullable();
+      tbl.integer('en_passant_vuln_y');
+      tbl.integer('en_passant_vuln_x');
       tbl.integer('won')
         .notNullable();
     })

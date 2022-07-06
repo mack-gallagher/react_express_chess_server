@@ -1,6 +1,6 @@
 const secret = require('./secrets');
 const jwt = require('jsonwebtoken');
-const Game = require('../game/game_model');
+const Players = require('./players_model');
 
 function validate_new_player(req, res, next) {
   if (Object.entries(req.body).length !== 1) {
@@ -38,7 +38,7 @@ function validate_token(req, res, next) {
 };
 
 const check_player_status = async (req, res, next) => {
-  const response = await Game.get_player_by_id(req.headers.authorization.id);
+  const response = await Players.get_by_id(req.headers.authorization.id);
   if (!response) {
     res.status(403).json({ message: 'Wait a minute...who ARE you?!?' });
     return;

@@ -1,29 +1,14 @@
 const Game = require('./game_model');
+const Players  = require('../auth/players_model');
 const { valid_moves_per_piece } = require('./valid_moves_per_piece');
 
 const black_pieces = ['♚','♛','♝','♜','♞','♟'];
 const white_pieces = ['♔','♕','♗','♖','♘','♙'];
 
-const serve_game_hammered_board = async () => {
-  const unhammered_board = await Game.board();
-
-  const board = [];
-  for (let i = 0; i < 64; i += 8) {
-    board.push([]);
-    for (let j = i; j-i < 8; j++) {
-      board[i/8].push({});
-      board[i/8][j-i].piece = unhammered_board[j].piece;
-      board[i/8][j-i].moves = [];
-      board[i/8][j-i].captures = [];
-    }
-  }
-
-  return board;
-}
-
-const get_valid_moves_and_captures = (active_player,y,x,board) => {
+const get_valid_moves_and_captures = async (active_player,y,x,board) => {
+  const opposing_player = (active_player===1?2:1);
   const piece = board[y][x].piece;
-  if (!piece) { console.log('no piece here!'); return { valid_moves: [], valid_captures: [] }; }
+  if (!piece) { return { valid_moves: [], valid_captures: [] }; }
 
   const vuln_pieces = (active_player==1?black_pieces:white_pieces);
   const valid_moves = [];
@@ -33,6 +18,12 @@ const get_valid_moves_and_captures = (active_player,y,x,board) => {
 
   if (valid_moves_per_piece[piece].hasOwnProperty('captures')) {              // if I am a pawn
 
+    let en_passant_capture = [null,null];
+    const them = await Players.get_by_id(opposing_player);
+    if (them.en_passant_vuln_y) {
+      en_passant_capture = [them.en_passant_vuln_y,them.en_passant_vuln_x];
+    }
+
     for (let i = 0; i < valid_moves_per_piece[piece].captures.length; i++) {  // number of distinct WAYS I, a pawn, can capture
       let forward_y = 0;
       let forward_x = 0;
@@ -40,13 +31,15 @@ const get_valid_moves_and_captures = (active_player,y,x,board) => {
       for (let j = 0; j < valid_moves_per_piece[piece].propagate; j++) {
         forward_y += valid_moves_per_piece[piece].captures[i][0];
         forward_x += valid_moves_per_piece[piece].captures[i][1];
-  
+ 
         if (y+forward_y >= 0
             && y+forward_y < 8
             && x+forward_x >= 0
             && x+forward_x < 8
-            && vuln_pieces.indexOf(board[y+forward_y][x+forward_x].piece) !== -1) {
-          valid_captures.push([y+forward_y,x+forward_x]);                            // I shouldn't need to break because I can only capture one square ahead
+            && (vuln_pieces.indexOf(board[y+forward_y][x+forward_x].piece) !== -1
+                || en_passant_capture[0] === y+forward_y && en_passant_capture[1] === x+forward_x)) {
+          valid_captures.push([y+forward_y,x+forward_x]);
+          break;
         }
       }
       
@@ -61,7 +54,6 @@ const get_valid_moves_and_captures = (active_player,y,x,board) => {
           && !board[y-1][x].piece && !board[y-2][x].piece))) {
     (white_pieces.indexOf(piece) !== -1)?valid_moves.push([y-2,x]):valid_moves.push([y+2,x]);
   } 
-
 
   for (let i = 0; i < valid_moves_per_piece[piece].moves.length; i++) {   // ways I can move; this array is inclusive of ways I can capture if I am not a pawn
 
@@ -95,12 +87,11 @@ const get_valid_moves_and_captures = (active_player,y,x,board) => {
       
   }
 
-
   return { valid_moves, valid_captures };
 }
 
-function is_king_in_check(vuln_player,board) {
-  const offensive_player = (vuln_player===2?1:2);
+const is_king_in_check = async (vuln_player,board) => {
+  const aggressing_player = (vuln_player===2?1:2);
   const opposing_pieces = (vuln_player===2?white_pieces:black_pieces);
   const vuln_king = (vuln_player===2?'♚':'♔');
 
@@ -116,7 +107,9 @@ function is_king_in_check(vuln_player,board) {
   for (let i = 0; i < 8; i++) {
     for (let j = 0; j < 8; j++) {
       if (opposing_pieces.indexOf(board[i][j].piece) !== -1) {    // if the square I'm analyzing contains a piece that potentially threatens Vuln
-        if (get_valid_moves_and_captures(offensive_player,i,j,board).valid_captures.some(x => board[x[0]][x[1]].piece === vuln_king)) {
+        const z = await get_valid_moves_and_captures(aggressing_player,i,j,board);
+        const vuln_king_search_field = z.valid_captures;
+        if (vuln_king_search_field.some(x => board[x[0]][x[1]].piece === vuln_king)) {
           return 1;
         }
       }
@@ -129,10 +122,7 @@ function is_king_in_check(vuln_player,board) {
 }
 
 
-/* THIS ONE [have_i_won] HAS NOT BEEN PROPERLY VALIDATED */
-/* TODO: MAKE THIS WORK */
-
-function have_i_won(active_player,next_board) {
+const have_i_won = async (active_player,next_board) => {
 
   const vuln_player = (active_player===1?2:1);
   const vuln_pieces = (vuln_player===2?black_pieces:white_pieces);
@@ -144,7 +134,7 @@ function have_i_won(active_player,next_board) {
 
       if (vuln_pieces.indexOf(next_board[i][j].piece) !== -1) {
 
-        const valid_moves_and_captures = get_valid_moves_and_captures(vuln_player,i,j,next_board);
+        const valid_moves_and_captures = await get_valid_moves_and_captures(vuln_player,i,j,next_board);
         let moves_and_captures_arr_for_tmp_piece = valid_moves_and_captures.valid_moves.concat(valid_moves_and_captures.valid_captures);
 
         for (let x = 0; x < moves_and_captures_arr_for_tmp_piece.length; x++) {
@@ -169,6 +159,4 @@ function have_i_won(active_player,next_board) {
   return 1;  
 }
 
-/* END WARNING */
-
-module.exports = { serve_game_hammered_board, get_valid_moves_and_captures, is_king_in_check, have_i_won };
+module.exports = { get_valid_moves_and_captures, is_king_in_check, have_i_won };
