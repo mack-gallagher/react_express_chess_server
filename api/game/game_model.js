@@ -19,21 +19,27 @@ const hammered_board = async () => {
 }
 
 const reset_board = async() => {
+  await db('history')
+          .truncate();
   await db('captures')
           .truncate();
-
   await db('board')
           .truncate();
- 
-  return db('board')
-          .insert(initial_board); 
+  await db('board')
+          .insert(initial_board);
+  await db('players')
+          .where({ id: 2 })
+          .update({ active: 0 });
+  return db('players')
+          .where({ id: 1 })
+          .update({ active: 1 });
 }
 
 const move_piece = async (active_id,start,destination) => {
   const piece_obj = await db('board')
                           .where({ y:start[0],x:start[1] })
                           .first();
-const piece = piece_obj.piece;
+  const piece = piece_obj.piece;
 
   await db('board')
     .where({ y:start[0],x:start[1] })

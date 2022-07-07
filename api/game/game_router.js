@@ -34,7 +34,6 @@ router.get('/', validate_token, async (req, res) => {
   if (players.some(x => x.won === 1)) {
     won = players.filter(x => x.won === 1)[0].id;
   }
-
   res.status(200).json({  board,
                           color,  
                           active,
@@ -47,17 +46,16 @@ router.get('/', validate_token, async (req, res) => {
                           castle_possible_queenside,
                           en_passant_y,
                           en_passant_x, });
+   
 });
 
 router.post('/dump', validate_token, async (req, res) => {
-  await History.clear();
   await Game.reset_board(); // necessary to REPLACE pieces
   await Players.drop_all();
   res.status(200).json({ message: 'Game dropped!' });
 });
 
 router.post('/reset', validate_token, async (req, res) => {
-  await History.clear();
   await Game.reset_board();
   const board_state = await Game.hammered_board();
   res.status(200).json({ board: board_state });

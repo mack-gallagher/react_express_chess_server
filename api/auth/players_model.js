@@ -1,4 +1,5 @@
 const db = require('../../data/db_config');
+const { initial_board } = require('../../data/seeds/01_initial_board');
 
 const get_all = _ => {
   return db('players');
@@ -18,10 +19,14 @@ const add = async player => {
 }
 
 const drop_all = async _ => {
+  await db('history')
+          .truncate();
   await db('captures')
           .truncate();
   await db('board')
           .truncate();
+  await db('board')
+          .insert(initial_board);
   return db('players')
           .truncate();
 }
