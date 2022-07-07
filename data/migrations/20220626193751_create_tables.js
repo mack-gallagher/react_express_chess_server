@@ -32,10 +32,18 @@ exports.up = function(knex) {
       tbl.varchar('piece')
           .notNullable();
     })
+    .createTable('history', tbl => {
+      tbl.increments();
+      tbl.varchar('player')
+          .notNullable();
+      tbl.varchar('move_record')
+          .notNullable();
+    })
 };
 
 exports.down = function(knex) {
   return knex.schema
+    .dropTableIfExists('history')
     .dropTableIfExists('captures')
     .dropTableIfExists('board')
     .dropTableIfExists('players');

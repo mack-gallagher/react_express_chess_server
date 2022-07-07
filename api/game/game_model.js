@@ -135,4 +135,4 @@ module.exports = {  hammered_board,
                     queen,
                     captures,
                     append_to_captures,
-                    castle  };
+                    castle };

@@ -2,12 +2,15 @@ const express = require('express');
 const router = express.Router();
 const { validate_token, 
         check_player_status } = require('../auth/auth_middleware');
-const { get_valid_moves_and_captures, 
+const { piece_to_id_and_letter,
+        to_algebraic_notation,
+        get_valid_moves_and_captures, 
         is_king_in_check, 
         have_i_won } = require('./rules');
 
 const Game = require('./game_model');
 const Players = require('../auth/players_model');
+const History = require('./history_model');
 
 router.get('/', validate_token, async (req, res) => {
   const color = req.headers.authorization.id;
@@ -26,6 +29,7 @@ router.get('/', validate_token, async (req, res) => {
   const captures = await Game.captures();
   const players = await Players.get_all();
   const num_players = players.length;
+  const history = await History.get_all();
   let won = -1;
   if (players.some(x => x.won === 1)) {
     won = players.filter(x => x.won === 1)[0].id;
@@ -36,6 +40,7 @@ router.get('/', validate_token, async (req, res) => {
                           active,
                           captures,
                           num_players,
+                          history,
                           won,
                           queening,
                           castle_possible_kingside,
@@ -45,12 +50,14 @@ router.get('/', validate_token, async (req, res) => {
 });
 
 router.post('/dump', validate_token, async (req, res) => {
-  await Players.drop_all();
+  await History.clear();
   await Game.reset_board(); // necessary to REPLACE pieces
+  await Players.drop_all();
   res.status(200).json({ message: 'Game dropped!' });
 });
 
 router.post('/reset', validate_token, async (req, res) => {
+  await History.clear();
   await Game.reset_board();
   const board_state = await Game.hammered_board();
   res.status(200).json({ board: board_state });
@@ -76,14 +83,21 @@ router.post('/activate', validate_token, check_player_status, async (req, res) =
 });
 
 router.post('/move', validate_token, check_player_status, async (req, res) => {
+  const start = req.body.start;
   const start_y = req.body.start[0];
   const start_x = req.body.start[1];
+  const destination = req.body.destination;
   const dest_y = req.body.destination[0];
   const dest_x = req.body.destination[1];
   const active_player = req.headers.authorization.id;
   const opposing_player = active_player===1?2:1;
   const board = await Game.hammered_board();
   const piece = board[start_y][start_x].piece;
+  let pawn_file = '';
+  if (piece === '♙'
+      || piece === '♟') {
+    pawn_file = to_algebraic_notation(start)[0]; // access first part of string
+  }
 
   const valid_moves_and_captures_obj = await get_valid_moves_and_captures(active_player,start_y,start_x,board);
 
@@ -108,11 +122,15 @@ router.post('/move', validate_token, check_player_status, async (req, res) => {
       return;
     }
   }
-  
+ 
+  let capturing = 0; 
+  let en_passant = 0;
   const player_for_en_passant_check = await Players.get_by_id(opposing_player);
   const en_passant_capture = [player_for_en_passant_check.en_passant_vuln_y,player_for_en_passant_check.en_passant_vuln_x];
   if (en_passant_capture[0]===dest_y
       && en_passant_capture[1]===dest_x) {
+    capturing = 1;
+    en_passant = 1;
     if (active_player===1) {
       await Game.append_to_captures(board[dest_y+1][dest_x].piece);
       await Game.remove_piece([dest_y+1,dest_x]);
@@ -122,7 +140,8 @@ router.post('/move', validate_token, check_player_status, async (req, res) => {
     }
   } else {
     if (board[dest_y][dest_x].piece) {
-    await Game.append_to_captures(board[dest_y][dest_x].piece);    
+      capturing = 1;
+      await Game.append_to_captures(board[dest_y][dest_x].piece);    
     }
   }
 
@@ -134,6 +153,15 @@ router.post('/move', validate_token, check_player_status, async (req, res) => {
           && dest_y === 7)) {
     await Game.move_piece(active_player,req.body.start,req.body.destination);
     await Players.start_queening(active_player);
+    const letter = piece_to_id_and_letter(piece)[1];
+    const algebraic_destination = to_algebraic_notation(destination);
+    let move_record = '';
+    if (capturing) {
+      move_record = letter + 'x' + algebraic_destination;  // we can't be queening and en passant at the same time!
+    } else {
+      move_record = letter + algebraic_destination;
+    }
+    await History.hash(active_player,move_record);
     const new_board = await Game.hammered_board();
     res.status(200).json({ board: new_board, queening: 1 });
     return;
@@ -152,6 +180,19 @@ router.post('/move', validate_token, check_player_status, async (req, res) => {
       await Players.kill_castle(active_player,"queenside");
     }
     await Game.move_piece(active_player,req.body.start,req.body.destination);
+    const letter = piece_to_id_and_letter(piece)[1];
+    const algebraic_destination = to_algebraic_notation(destination);
+    let move_record = '';
+    if (capturing) {
+      if (en_passant) {
+        move_record = pawn_file + letter + 'x' + algebraic_destination;
+      } else {
+        move_record = letter + 'x' + algebraic_destination;
+      }
+    } else {
+      move_record = letter + algebraic_destination;
+    }
+    await History.hash(active_player,move_record);
     await Players.hand_off(active_player);
   } catch (error) {
     console.error(error);
@@ -173,18 +214,20 @@ router.post('/move', validate_token, check_player_status, async (req, res) => {
 router.post(`/queen`, validate_token, check_player_status, async (req, res) => {
   const active_player = req.headers.authorization.id;
   const opposing_player = active_player===1?2:1;
-  const new_board = await Game.queen(req.body.pos,req.body.new_piece);
+  const new_piece = req.body.new_piece;
+  const new_board = await Game.queen(req.body.pos,new_piece);
 
   const new_new_board = await Game.hammered_board();
 
   if (is_king_in_check(opposing_player,new_new_board)) {
     if (have_i_won(active_player,new_new_board) === 1) {
-      const winer = await Players.win(active_player);
+      const winner = await Players.win(active_player);
       res.status(200).json({ message: `${winner} wins!` });
       return;
     }
   }
   await Players.end_queening(active_player);
+  await History.queen(new_piece);
   await Players.hand_off(active_player);
   res.status(200).json({ board: new_board });
 });
@@ -226,6 +269,8 @@ router.post('/castle', validate_token, check_player_status, async (req, res) => 
   await Game.castle(active_player,king_or_queen_side);
   await Players.kill_castle(active_player,"kingside");
   await Players.kill_castle(active_player,"queenside");
+  let move_record = king_or_queen_side==="kingside"?"0-0":"0-0-0";
+  await History.hash(active_player,move_record);
   await Players.hand_off(active_player);
   const new_board = await Game.hammered_board();
   res.status(200).json({ board: new_board });

@@ -2,8 +2,63 @@ const Game = require('./game_model');
 const Players  = require('../auth/players_model');
 const { valid_moves_per_piece } = require('./valid_moves_per_piece');
 
-const black_pieces = ['♚','♛','♝','♜','♞','♟'];
 const white_pieces = ['♔','♕','♗','♖','♘','♙'];
+const black_pieces = ['♚','♛','♝','♜','♞','♟'];
+
+const piece_to_id_and_letter = piece => {
+  switch (piece) {
+    case '♔':
+      return [1,'K'];
+    case '♕':
+      return [1,'Q']; 
+    case '♗':
+      return [1,'B'];
+    case '♖':
+      return [1,'R'];
+    case '♘':
+      return [1,'N'];
+    case '♙':
+      return [1,''];
+    case '♚':
+      return [2,'K'];
+    case '♛':
+      return [2,'Q'];
+    case '♝':
+      return [2,'B'];
+    case '♜':
+      return [2,'R'];
+    case '♞':
+      return [2,'N'];
+    case '♟':
+      return [2,''];
+    default:
+      return [null,null];
+  }
+}
+
+const to_algebraic_notation = ([y,x]) => {
+  const r = (8-y).toString();
+  switch (x) {
+    case 0:
+      return 'a'+r;
+    case 1:
+      return 'b'+r;
+    case 2:
+      return 'c'+r;
+    case 3:
+      return 'd'+r;
+    case 4:
+      return 'e'+r;
+    case 5:
+      return 'f'+r;
+    case 6:
+      return 'g'+r;
+    case 7:
+      return 'h'+r;
+    default:
+      return null;
+  }
+}
 
 const get_valid_moves_and_captures = async (active_player,y,x,board) => {
   const opposing_player = (active_player===1?2:1);
@@ -159,4 +214,8 @@ const have_i_won = async (active_player,next_board) => {
   return 1;  
 }
 
-module.exports = { get_valid_moves_and_captures, is_king_in_check, have_i_won };
+module.exports = {  piece_to_id_and_letter,
+                    to_algebraic_notation, 
+                    get_valid_moves_and_captures,  
+                    is_king_in_check, 
+                    have_i_won };
