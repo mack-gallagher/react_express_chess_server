@@ -12,7 +12,7 @@ The chess server should currently be bug-free; if you find a bug, please message
 
 - JavaScript
 - Node.js
-- Express.js to set up multiple routers
+- Express.js to group endpoints into routers, and enable middleware
 - cors library to enable same-origin access
 - sqlite3 to store chessboard and auth state
 - jasonwebtokens [jwt library] for auth
