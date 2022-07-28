@@ -8,6 +8,15 @@
 
 The chess server should currently be bug-free; if you find a bug, please message me on GitHub!
 
+## Technologies Used
+
+- JavaScript
+- Node.js
+- Express.js to set up multiple routers
+- cors library to enable same-origin access
+- sqlite3 to store chessboard and auth state
+- jasonwebtokens [jwt library] for auth
+
 ## Usage
 
 To connect with and use the server, have a friend open the [frontend](https://github.com/mack-gallagher/react_express_chess_frontend) and separately open your own frontend instance. Then, both of you should click [Play]. After that, you should see a chessboard.
