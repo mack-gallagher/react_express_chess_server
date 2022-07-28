@@ -166,11 +166,11 @@ router.post('/move', validate_token, check_player_status, async (req, res) => {
   }
   try {
     if (piece === (active_player===1?'♖':'♜')
-        && start_y === active_player===1?7:0
+        && start_y === (active_player===1?7:0)
         && start_x === 7) {
       await Players.kill_castle(active_player,"kingside");
     } else if (piece === (active_player===1?'♖':'♜')
-        && start_y === active_player===1?7:0
+        && start_y === (active_player===1?7:0)
         && start_x === 0) {
       await Players.kill_castle(active_player,"queenside");
     } else if (piece === (active_player===1?'♔':'♚')) { 

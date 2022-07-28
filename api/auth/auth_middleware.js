@@ -2,35 +2,21 @@ const secret = require('./secrets');
 const jwt = require('jsonwebtoken');
 const Players = require('./players_model');
 
-function validate_new_player(req, res, next) {
-  if (Object.entries(req.body).length !== 1) {
-    res.status(400).json({ message: 'Incoming players must have only a name' });
-    return;
-  } else if (!req.body.hasOwnProperty('name')) {
-    res.status(400).json({ message: 'Incoming players must have a name' });
-    return;
-  } else if (req.body.name.length < 1) {
-    res.status(400).json({ message: 'Game names must have content' });
-    return;
-  }
-
-  req.body.won = 0;
-
-  next();
-}
-
 function validate_token(req, res, next) {
 
   const token = req.headers.authorization;
+  console.log(token);
 
   if (!token) {
     res.status(403).json({ message: 'token required' });
     return;
   } else if (token.split('.').length !== 3
             || !jwt.verify(token,secret) ) {
+    console.log('INVALID TOKEN: ',token);
     res.status(401).json({ message: 'token invalid!' });
     return;
   } else {
+    console.log('VALID TOKEN: ',token);
     req.headers.authorization = jwt.verify(token,secret);
     next();
   }
@@ -58,4 +44,4 @@ const check_player_status = async (req, res, next) => {
   next();
 };
 
-module.exports = { validate_new_player, validate_token, check_player_status };
+module.exports = { validate_token, check_player_status };

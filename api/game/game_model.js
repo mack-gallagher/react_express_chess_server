@@ -28,6 +28,13 @@ const reset_board = async() => {
   await db('board')
           .insert(initial_board);
   await db('players')
+          .update({ queening: 0,
+                    castle_possible_kingside: 1,
+                    castle_possible_queenside: 1, 
+                    en_passant_vuln_y: null,
+                    en_passant_vuln_x: null,
+                    won: 0 });
+  await db('players')
           .where({ id: 2 })
           .update({ active: 0 });
   return db('players')

@@ -4,14 +4,13 @@ const router = express.Router();
 const secret = require('./secrets');
 const jwt = require('jsonwebtoken');
 
-const { validate_new_player, validate_token } = require('./auth_middleware');
+const { validate_token } = require('./auth_middleware');
 const Game = require('../game/game_model');
 const Players = require('./players_model');
 
 function generate_token(player) {
   const payload = {
                     id: player.id,
-                    name: player.name,
                   };
   const options = {
                     expiresIn: '1d',
@@ -30,7 +29,7 @@ router.get('/', validate_token, (req, res) => {
     })
 });
 
-router.post('/', validate_new_player, async (req, res) => {
+router.post('/', async (req, res) => {
 
   const result = await Players.get_all();
  
@@ -48,13 +47,14 @@ router.post('/', validate_new_player, async (req, res) => {
   req.body.queening = 0;
   req.body.castle_possible_kingside = 1;
   req.body.castle_possible_queenside = 1;
+  req.body.won = 0;
   await Players.add(req.body);
         
   const token = generate_token(req.body);
+  console.log('generated token:',token);
 
   res.status(201).json({ message: 'Welcome to the game! Here is your token:',
-                                  token });
-                                       
+                                  token });                                       
   
 });
 
