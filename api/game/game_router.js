@@ -49,7 +49,7 @@ router.get('/', validate_token, async (req, res) => {
    
 });
 
-router.post('/dump', validate_token, async (req, res) => {
+router.post('/dump', async (req, res) => {
   await Game.reset_board(); // necessary to REPLACE pieces
   await Players.drop_all();
   res.status(200).json({ message: 'Game dropped!' });
